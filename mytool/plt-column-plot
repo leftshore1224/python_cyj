@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+import numpy as np
+
+def _parse_slice(s):
+    if ':' in s:
+        a = [int(e) if e.strip() else None for e in s.split(":")]
+    else:
+        a = [int(s), int(s)+1]
+    return slice(*a)
+
+def argparse():
+    import argparse
+    parser = argparse.ArgumentParser(description = """
+    This code will plot x-y figure.
+    """)
+    # Positional arguments
+    parser.add_argument('data', type=str, help='Path to data file.')
+    parser.add_argument('y_axis', nargs='+', type=int, help='Column numbers of y-axis data. Multiple-plot is available.')
+    # Optional arguments
+    parser.add_argument('-x', '--x_axis', type=int, default=0, help='Column number of x-axis data. Zero(Line number) as default.')
+    parser.add_argument('-n', '--line_slice', type=_parse_slice, default=':', help='e.g. 200:1000:10  Specified slice of rows of data will be used. Default: automatic')
+    parser.add_argument('-l', '--log_scale', action='store_true', help='If provided, Plot y axis as log scale.')
+    parser.add_argument('-c', '--color_list', type=str, nargs='+', default=[], help='Scatter color list. len(color_list) == len(y_axis). [default: Automatic].')
+    parser.add_argument('-b', '--label_list', type=str, nargs='+', default=[], help='Legend label list. len(label_list) == len(y_axis). [default: Column number]. If you want no legend, set it "none"')
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    ## Intro
+    import datetime
+    now = datetime.datetime.now()
+    time = now.strftime('%Y-%m-%d %H:%M:%S')
+    print('')
+    print('>>>>> Code by Young Jae Choi @ Phys. Dep. of POSTECH in Korea <<<<<'.center(120))
+    print(('Code runtime : '+time).center(120))
+    print('')
+    print('=================================================================================================='.center(120))
+    print('This code will plot x-y figure.'.center(120))
+    print('=================================================================================================='.center(120))
+    print('')
+    ## Argparse
+    args           = argparse()
+    fname          = args.data
+    y_axis_seq_arr = np.array(args.y_axis, dtype = int) -1
+    x_axis_seq     = args.x_axis -1
+    line_slice     = args.line_slice
+    log_bool       = args.log_scale
+
+    x = []
+    y_list = []
+    for i in range(len(y_axis_seq_arr)):
+        y_list.append([])
+    ## Gather data
+    with open(fname, 'r') as f:
+        data = f.readlines()[line_slice]
+
+    #
+    from matplotlib import pyplot as plt
+    font = {'family':'Arial'}
+    plt.rc('font', **font)
+
+    #
+    if log_bool:
+        plt.yscale('log')
+    if x_axis_seq != -1:
+        for line in data:
+            word_list = line.split()
+            try:
+                x.append(float(word_list[x_axis_seq]))
+            except:
+                continue
+            else:
+                for i in range(len(y_axis_seq_arr)):
+                    try:
+                        tmp = float(word_list[y_axis_seq_arr[i]])
+                    except:
+                        tmp = None
+                    else:
+                        pass
+                    y_list[i].append(tmp)
+
+        # Plot
+        for i in range(len(y_list)):
+            # Color
+            if args.color_list:
+                color = args.color_list[i]
+            else:
+                color = None
+
+            # Label
+            if args.label_list and 'none' not in args.label_list:
+                label = args.label_list[i]
+            else:
+                label = 'Column {}'.format(y_axis_seq_arr[i]+1)
+
+            plt.scatter(x, y_list[i], 1, c=color, marker='o', label=label)
+    else:
+        for line in data:
+            word_list = line.split()
+            try:
+                tmp = float(word_list[y_axis_seq_arr[0]])
+            except:
+                continue
+            else:
+                y_list[0].append(tmp)
+                for i in range(1, len(y_axis_seq_arr)):
+                    try:
+                        tmp = float(word_list[y_axis_seq_arr[i]])
+                    except:
+                        tmp = None
+                    else:
+                        y_list[i].append(tmp)
+
+        # Plot
+        for i in range(len(y_list)):
+            # Color
+            if args.color_list:
+                color = args.color_list[i]
+            else:
+                color = None
+
+            # Label
+            if args.label_list and 'none' not in args.label_list:
+                label = args.label_list[i]
+            else:
+                label = 'Column {}'.format(y_axis_seq_arr[i]+1)
+
+            plt.scatter(np.arange(len(y_list[i])), y_list[i], 1, c=color, marker='o', label=label)
+
+    # Set style
+    plt.tick_params(axis="both", direction="in", labelsize='x-large')
+    plt.tick_params(which='minor', direction="in", labelsize='x-large')
+    plt.grid(alpha=0.2, which='both')
+    plt.subplots_adjust(left=0.15, right=0.95)
+    plt.legend(loc='best', fontsize='large')
+    if 'none' in args.label_list:
+        plt.legend().remove()
+    plt.show()
+
+    
+
